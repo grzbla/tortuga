@@ -118,13 +118,16 @@
 
   <script>
     const files = [
+      "mame/sites/https://www.mamedev.org/release.html",
+      "mame/sites/https://pleasuredome.github.io/pleasuredome/",
       "mame/roms/bigfight.zip",
       "mame/roms/ffight.zip",
       "mame/roms/ffightae.zip",
       "mame/roms/vendetta.zip",
       "mame/roms/vendettaz.zip",
-      "redream/bios/dc_boot.bin",
-      "redream/bios/dc_flash.bin"
+      "tools/maintenance/cpuz.exe",
+      "tools/maintenance/HWMonitor_x64.exe",
+      "tools/maintenance/HPUSBDisk.exe"
     ];
 
     const expectedDelta = 3;
@@ -132,7 +135,8 @@
 
     const map = {};
     for (const path of files) {
-      const [cat, type, file] = path.split('/');
+      const [cat, type, ...rest] = path.split('/');
+      const file = rest.join('/');
       if (!cat || !type || !file) continue;
       if (!map[cat]) map[cat] = {};
       if (!map[cat][type]) map[cat][type] = [];
@@ -151,13 +155,31 @@
         t.innerHTML = `<h2>${type}</h2>`;
         const row = document.createElement('div');
         row.className = 'file-row';
+
         files.forEach(file => {
           const a = document.createElement('a');
           a.className = 'file-entry';
-          a.href = `${category}/${type}/${file}`;
-          a.innerHTML = `<div class="file-icon">📄</div><div class="file-label">${file}</div>`;
+          const isURL = file.startsWith('http://') || file.startsWith('https://');
+
+          if (isURL) {
+            a.href = file;
+            a.target = "_blank";
+            const label = file.replace(/^https?:\/\//, '').replace(/\/$/, '');
+            a.innerHTML = `
+              <div class="file-icon">🌐</div>
+              <div class="file-label">${label}</div>
+            `;
+          } else {
+            a.href = `${category}/${type}/${file}`;
+            a.innerHTML = `
+              <div class="file-icon">📄</div>
+              <div class="file-label">${file}</div>
+            `;
+          }
+
           row.appendChild(a);
         });
+
         t.appendChild(row);
         div.appendChild(t);
       });
