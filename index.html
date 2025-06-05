@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Content Browser</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+    }
+    .scroller {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: transform 0.8s ease;
+    }
+    .category {
+      flex: 0 0 100vh;
+      padding: 2em;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+    .category h1 {
+      font-size: 3em;
+      margin: 0 0 0.5em;
+      color: #0ff;
+      text-align: center;
+    }
+    .logo {
+      display: block;
+      margin: 1em auto 2em auto;
+      max-width: 40vw;
+      max-height: 20vh;
+      object-fit: contain;
+      opacity: 0.8;
+    }
+    .type {
+      margin-bottom: 2em;
+    }
+    .type h2 {
+      font-size: 1.5em;
+      color: #f0f;
+      margin: 0 0 0.5em;
+    }
+    .file-row {
+      display: flex;
+      flex-direction: row;
+      gap: 1em;
+      padding-bottom: 1em;
+      flex-wrap: wrap;
+    }
+    .file-entry {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 80px;
+      flex-shrink: 0;
+      text-decoration: none;
+      color: #fff;
+      transition: transform 0.2s ease;
+      margin-bottom: 1em;
+    }
+    .file-entry:hover {
+      transform: scale(1.1);
+      color: #0f0;
+    }
+    .file-icon {
+      font-size: 2.5em;
+    }
+    .file-label {
+      margin-top: 0.5em;
+      font-size: 0.9em;
+      word-break: break-word;
+      text-align: center;
+    }
+
+    #scrollbar {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: 16px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      z-index: 10;
+      gap: 4px;
+      padding: 4px 0;
+      box-sizing: border-box;
+    }
+
+    .segment {
+      position: relative;
+      flex: 1;
+      background: #222;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .highlight {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      background: #0ff;
+      height: 0;
+      transition: height 0.1s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="scrollbar"></div>
+  <div id="container" class="scroller"></div>
+
+  <script>
+    const files = [
+      "mame/roms/bigfight.zip",
+      "mame/roms/ffight.zip",
+      "mame/roms/ffightae.zip",
+      "mame/roms/vendetta.zip",
+      "mame/roms/vendettaz.zip",
+      "redream/bios/dc_boot.bin",
+      "redream/bios/dc_flash.bin"
+    ];
+
+    const expectedDelta = 3;
+    const scrollIncrement = 1 / expectedDelta;
+
+    const map = {};
+    for (const path of files) {
+      const [cat, type, file] = path.split('/');
+      if (!cat || !type || !file) continue;
+      if (!map[cat]) map[cat] = {};
+      if (!map[cat][type]) map[cat][type] = [];
+      map[cat][type].push(file);
+    }
+
+    const container = document.getElementById('container');
+    Object.entries(map).forEach(([category, types]) => {
+      const div = document.createElement('div');
+      div.className = 'category';
+      const logoHTML = `<img src="${category}/logo.png" class="logo" onerror="this.style.display='none'">`;
+      div.innerHTML = `<h1>${category}</h1>${logoHTML}`;
+      Object.entries(types).forEach(([type, files]) => {
+        const t = document.createElement('div');
+        t.className = 'type';
+        t.innerHTML = `<h2>${type}</h2>`;
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        files.forEach(file => {
+          const a = document.createElement('a');
+          a.className = 'file-entry';
+          a.href = `${category}/${type}/${file}`;
+          a.innerHTML = `<div class="file-icon">📄</div><div class="file-label">${file}</div>`;
+          row.appendChild(a);
+        });
+        t.appendChild(row);
+        div.appendChild(t);
+      });
+      container.appendChild(div);
+    });
+
+    const slides = document.querySelectorAll('.category');
+    const total = slides.length;
+    let scrollProgress = 0;
+
+    const scrollbar = document.getElementById('scrollbar');
+    const segments = [];
+
+    for (let i = 0; i < total; i++) {
+      const seg = document.createElement('div');
+      seg.className = 'segment';
+      const hi = document.createElement('div');
+      hi.className = 'highlight';
+      seg.appendChild(hi);
+      scrollbar.appendChild(seg);
+      segments.push(hi);
+    }
+
+    function clamp(val, min, max) {
+      return Math.max(min, Math.min(max, val));
+    }
+
+    function renderScrollVisual() {
+      segments.forEach((el, i) => {
+        if (i < Math.floor(scrollProgress)) {
+          el.style.height = "100%";
+        } else if (i === Math.floor(scrollProgress)) {
+          const delta = scrollProgress - i;
+          el.style.height = `${clamp(delta, 0, 1) * 100}%`;
+        } else {
+          el.style.height = "0%";
+        }
+      });
+    }
+
+    function applySlidePosition() {
+      const index = Math.floor(scrollProgress);
+      container.style.transform = `translateY(-${index * 100}vh)`;
+    }
+
+    window.addEventListener('wheel', (e) => {
+      const dir = Math.sign(e.deltaY);
+      scrollProgress += dir * scrollIncrement;
+      scrollProgress = clamp(scrollProgress, 0, total - 1 + 0.999);
+
+      renderScrollVisual();
+      applySlidePosition();
+    }, { passive: true });
+
+    renderScrollVisual();
+    applySlidePosition();
+  </script>
+</body>
+</html>
+
