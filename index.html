@@ -53,6 +53,9 @@
       padding-bottom: 1em;
       flex-wrap: wrap;
     }
+    .file-row.url-mode .file-entry{
+      width: 160px;
+    }
     .file-entry {
       display: flex;
       flex-direction: column;
@@ -62,7 +65,6 @@
       text-decoration: none;
       color: #fff;
       transition: transform 0.2s ease;
-      margin-bottom: 1em;
     }
     .file-entry:hover {
       transform: scale(1.1);
@@ -159,6 +161,9 @@
         t.innerHTML = `<h2>${type}</h2>`;
         const row = document.createElement('div');
         row.className = 'file-row';
+
+        const allURLs = files.every(f => f.startsWith('http://') || f.startsWith('https://'));
+        if (allURLs) row.classList.add('url-mode');
 
         files.forEach(file => {
           const a = document.createElement('a');
